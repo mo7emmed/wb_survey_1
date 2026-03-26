@@ -14,6 +14,8 @@ async function startServer() {
 
   // Telegram Notification Endpoint
   app.post("/api/notify", async (req, res) => {
+    const { timeSpent } = req.body;
+    
     // Check for both uppercase and lowercase versions of the keys
     const tgToken = process.env.TG_TOKEN || process.env.tg_token;
     const groupId = process.env.GROUP_ID || process.env.group_id;
@@ -24,7 +26,11 @@ async function startServer() {
     }
 
     try {
-      const message = "أكمل أحد المستخدمين الاستبيان";
+      let message = "أكمل أحد المستخدمين الاستبيان";
+      if (timeSpent) {
+        message += `\nالوقت المستغرق: ${timeSpent}`;
+      }
+      
       const url = `https://api.telegram.org/bot${tgToken}/sendMessage`;
       
       const response = await fetch(url, {

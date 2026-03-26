@@ -8,6 +8,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, Moon, Sun, Bed, Weight, CheckCircle2, ChevronRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+declare global {
+  interface Window {
+    fbq: any;
+    _fbq: any;
+  }
+}
+
 const QUESTIONS = [
   {
     id: 1,
@@ -56,6 +63,24 @@ export default function App() {
   const [currentStep, setCurrentStep] = useState(-1); // -1 for landing, 0-3 for questions, 4 for result
   const [answers, setAnswers] = useState<string[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [startTime] = useState(Date.now());
+
+  useEffect(() => {
+    const pageId = process.env.PAGE_ID;
+    if (pageId) {
+      // @ts-ignore
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      window.fbq('init', pageId);
+      window.fbq('track', 'SurveyPageView');
+    }
+  }, []);
 
   const handleStart = () => {
     setCurrentStep(0);
@@ -120,8 +145,24 @@ export default function App() {
 
   const handleWhatsAppClick = async () => {
     try {
+      // Track Meta Pixel Event
+      if (window.fbq) {
+        window.fbq('trackCustom', 'WABtnClick');
+      }
+
+      // Calculate time spent
+      const timeSpentMs = Date.now() - startTime;
+      const seconds = Math.floor(timeSpentMs / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      const timeSpentStr = minutes > 0 ? `${minutes} دقيقة و ${remainingSeconds} ثانية` : `${seconds} ثانية`;
+
       // Send Telegram notification in the background
-      fetch('/api/notify', { method: 'POST' }).catch(err => console.error('Silent notification error:', err));
+      fetch('/api/notify', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timeSpent: timeSpentStr })
+      }).catch(err => console.error('Silent notification error:', err));
     } catch (e) {
       console.error(e);
     }
